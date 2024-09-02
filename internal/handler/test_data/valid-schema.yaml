@@ -1,0 +1,21 @@
+rules:
+  nat:
+    - name: redirect-rule-1
+      source:
+        ip: "192.168.1.10"
+        port: "8080"
+        protocol: "tcp"
+      destination:
+        ip: "10.0.0.5"
+        port: "443"
+      action:
+        redirect_to:
+          port: 15002
+    - name: redirect-rule-2
+      source:
+        ip: "10.0.0.5"
+        port: "443"
+        protocol: "tcp"
+      action:
+        redirect_to:
+          port: 15002

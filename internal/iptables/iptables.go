@@ -2,11 +2,14 @@ package iptables
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 )
 
-const iptable = "iptable"
+const iptable = "iptables"
 
 type CmdError struct {
 	cmd      exec.Cmd
@@ -15,10 +18,23 @@ type CmdError struct {
 }
 
 func (e *CmdError) Error() string {
-	return ""
+
+	return fmt.Sprintf("running %v: exit status %v: %v", e.cmd.Args, e.exitCode, e.msg)
+
 }
 
 type IPTables struct {
+	path string
+}
+
+func New() (*IPTables, error) {
+	path, err := exec.LookPath(iptable)
+	if err != nil {
+		return nil, err
+	}
+	return &IPTables{
+		path: path,
+	}, nil
 }
 
 func (ipt *IPTables) runWithOutput(args []string, stout io.Writer) error {
@@ -27,15 +43,16 @@ func (ipt *IPTables) runWithOutput(args []string, stout io.Writer) error {
 	var stderr bytes.Buffer
 
 	cmd := exec.Cmd{
-		Path:   iptable,
+		Path:   ipt.path,
 		Args:   args,
 		Stdout: stout,
 		Stderr: &stderr,
 	}
 	if err := cmd.Run(); err != nil {
-		switch e := err.(type) {
-		case *exec.ExitError:
-			return &CmdError{cmd: cmd, msg: e.String(), exitCode: 1}
+		var e *exec.ExitError
+		switch {
+		case errors.As(err, &e):
+			return &CmdError{cmd: cmd, msg: stderr.String(), exitCode: 1}
 		default:
 			return err
 		}
@@ -45,7 +62,25 @@ func (ipt *IPTables) runWithOutput(args []string, stout io.Writer) error {
 }
 
 func (ipt *IPTables) ListChains(table string) ([]string, error) {
-	//cmd := []string{"-t", "table", "-S"}
+	cmd := []string{"-t", table, "-S"}
+	var stdout bytes.Buffer
+	if err := ipt.runWithOutput(cmd, &stdout); err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	UnprocessedChains := strings.Split(stdout.String(), "\n")
+	var chains []string
+	for _, ch := range UnprocessedChains {
+		if strings.HasPrefix(ch, "-P") || strings.HasPrefix(ch, "-N") {
+			chains = append(chains, strings.Fields(ch)[1])
+		} else {
+			break
+		}
+	}
+	return chains, nil
+}
+
+func (ipt *IPTables) Append(table, chain string, rule ...string) error {
+	cmd := append([]string{"-t", table, "-A", chain}, rule...)
+	return ipt.runWithOutput(cmd, nil)
 }
