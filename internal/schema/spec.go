@@ -8,11 +8,11 @@ type Rules struct {
 	NAT []NAT `json:"nat"`
 }
 type NAT struct {
-	Name        string      `yaml:"name"`
-	Description string      `yaml:"description"`
-	Source      Source      `yaml:"source"`
-	Destination Destination `yaml:"destination"`
-	Action      Action      `yaml:"action"`
+	Name        string       `yaml:"name"`
+	Description string       `yaml:"description"`
+	Source      *Source      `yaml:"source"`
+	Destination *Destination `yaml:"destination"`
+	Action      *Action      `yaml:"action"`
 }
 type Source struct {
 	IP       string `yaml:"ip"`
@@ -24,7 +24,7 @@ type Destination struct {
 	Port string `yaml:"port"`
 }
 type Action struct {
-	RedirectTo RedirectTo `yaml:"redirect_to"`
+	RedirectTo *RedirectTo `yaml:"redirect_to"`
 }
 type RedirectTo struct {
 	Port string `yaml:"port"`

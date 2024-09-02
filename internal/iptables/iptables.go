@@ -60,6 +60,34 @@ func (ipt *IPTables) runWithOutput(args []string, stout io.Writer) error {
 	}
 	return nil
 }
+func (ipt *IPTables) CheckChainExistence(table, chain string) (bool, error) {
+	chains, err := ipt.ListChains(table)
+	if err != nil {
+		return false, err
+	}
+	for _, ch := range chains {
+		if ch == chain {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (ipt *IPTables) CleanChain(table, chain string) error {
+	ok, err := ipt.CheckChainExistence(table, chain)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("chain '%s' does not exist in table '%s'", chain, table)
+	}
+	return ipt.runWithOutput([]string{"-t", table, "-F", chain}, nil)
+}
+
+func (ipt *IPTables) CreateChain(table, chain string) error {
+	cmd := []string{"-t", table, "-N", chain}
+	return ipt.runWithOutput(cmd, nil)
+}
 
 func (ipt *IPTables) ListChains(table string) ([]string, error) {
 	cmd := []string{"-t", table, "-S"}
